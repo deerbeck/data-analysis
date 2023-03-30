@@ -3,6 +3,8 @@ import math
 # assignment 01
 
 # calculate arithmetic mean value of the numbers in x
+
+
 def mittel(x):
     x = np.array(x)
     return sum(x)/(len(x))
@@ -36,31 +38,52 @@ def median(x):
     return 0.5*(x[int(n/2)-1] + x[int(n/2)]) if n % 2 == 0 else x[int((n+1)/2)-1]
 
 
-#calculate uncorrected samplevariance
+# calculate uncorrected samplevariance
 def var(x):
     x = np.array(x)
     n = len(x)
 
-    #get x_mean needed for s_sqr calculation
+    # get x_mean needed for s_sqr calculation
     x_mean = mittel(x)
-    #get uncorrected samplevariance using given formula
-    test = x - x_mean
-    test2 = test**2
+    # get uncorrected samplevariance using given formula
     s_sqr = (1/n) * sum((x-x_mean)**2)
     return s_sqr
 
 
 def regres(x, y):
-    pass
+    x = np.array(x)
+    y = np.array(y)
+    n = len(x)
+    #get mean values of x and y
+    x_mean = mittel(x)
+    y_mean = mittel(y)
+
+    #get empiric covariance
+    s_xy = (1/n)*sum((x-x_mean)*(y-y_mean))
+
+    #get uncorrected samplevariance from x
+    s_x_sqr = var(x)
+
+    #calculate slope beta
+    beta = (s_xy/s_x_sqr)
+
+    #calculate y-intercept
+    alpha = y_mean - beta*x_mean
+
+    #calculate quadratic error
+    q = sum(y - ((alpha + beta * x)**2))
+    
+    return (beta, alpha, q)
 
 
 def pca(X):
     pass
 
 
-x = [4.1, 4.5, 4.9, 5.1, 5.4, 5.7, 5.8, 5.8, 6, 67]
 
-x = [90,100,110]
-print(quartil(x, 0.25))
-print(median(x))
-print(var(x))
+
+# x = [4.1, 4.5, 4.9, 5.1, 5.4, 5.7, 5.8, 5.8, 6, 67]
+# x = [90, 100, 110]
+# print(quartil(x, 0.25))
+# print(median(x))
+# print(var(x))
