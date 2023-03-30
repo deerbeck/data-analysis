@@ -2,6 +2,8 @@ import numpy as np
 import math
 
 # calculate arithmetic mean value of the numbers in x
+
+
 def mittel(x):
     x = np.array(x)
     return sum(x)/(len(x))
@@ -23,7 +25,9 @@ def quartil(x, p):
 
 
 def median(x):
-    pass
+    # considering DRY you can calculate the median as a quartil with p = 0.5
+    return quartil(x, 0.5)
+
 
 
 def var(x):
@@ -41,3 +45,4 @@ def pca(X):
 x = [4.1, 4.5, 4.9, 5.1, 5.4, 5.7, 5.8, 5.8, 6, 67]
 
 print(quartil(x, 0.25))
+print(median(x))
