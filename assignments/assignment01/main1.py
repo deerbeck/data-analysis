@@ -26,8 +26,14 @@ def quartil(x, p):
 
 def median(x):
     # considering DRY you can calculate the median as a quartil with p = 0.5
-    return quartil(x, 0.5)
+    # return quartil(x, 0.5)
 
+    # calculating median through definition by cases
+    x = np.array(x)
+    n = len(x)
+
+    #ternary operater for 1 line statement
+    return 0.5*(x[int(n/2)-1] + x[int(n/2)]) if n % 2 == 0 else x[int((n+1)/2)-1]
 
 
 def var(x):
