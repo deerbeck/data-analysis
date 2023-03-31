@@ -94,19 +94,14 @@ def pca(X):
     C = []
     C.append((1/(n-1))*np.dot(np.transpose(B),B))
     
-
-    #iterate  throught C to get diagonal matrix
-    i = 0
-    while(True):
+    #iterate  throught C to get diagonal matrix as long as cornerpoints are smaller than 1e-15
+    while(~np.all(np.abs(C[-1] - np.diag(np.diagonal(C[-1]))) < 1e-15)):
         #QR-decomposition of C to get C_n+1
-        Q,R = np.linalg.qr(C[i])
+        Q,R = np.linalg.qr(C[-1])
         C.append(np.dot(R,Q))
 
-        #break condition that cornerpoint of latest C is smaller thane 1e-15
-        if abs(C[i][0][-1]) < 1e-15:
-             C.append(np.around(C[-1], 10))
-             break
-        i +=1
+    #append best diagonal matrix C to 
+    C.append(np.around(C[-1], 10))
 
     #get diagonal matrix containing eigenvalues
     D = np.dot(np.dot(np.transpose(Q),C),Q)
