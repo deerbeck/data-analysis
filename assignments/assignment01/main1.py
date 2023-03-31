@@ -77,6 +77,40 @@ def regres(x, y):
 
 
 def pca(X):
+    X_mean = []
+    X_T = np.transpose(X)
+    n = len(X)
+
+    #get mean array of X
+    for i in range(len(X_T)):
+        X_mean.append(np.array([mittel(X[i])]*n))
+    X_mean = np.array(X_mean).transpose()
+    
+    X_n = []
+    #get centered sample matrix
+    B = X-X_mean
+
+    #get sample covariance matrix
+    C = []
+    C.append((1/(n-1))*np.dot(np.transpose(B),B))
+    
+
+    #iterate  throught C to get diagonal matrix
+    i = 0
+    while(True):
+        #QR-decomposition of C to get C_n+1
+        Q,R = np.linalg.qr(C[i])
+        C.append(np.dot(R,Q))
+
+        #break condition that cornerpoint of latest C is smaller thane 1e-15
+        if abs(C[i][0][-1]) < 1e-15:
+             C.append(np.around(C[-1], 10))
+             break
+        i +=1
+
+    #get diagonal matrix containing eigenvalues
+    D = np.dot(np.dot(np.transpose(Q),C),Q)
+
     pass
 
 
@@ -87,3 +121,6 @@ def pca(X):
 # print(quartil(x, 0.25))
 # print(median(x))
 # print(var(x))
+
+X = np.array([np.array([1,2]),np.array([2,1]),np.array([3,3]),np.array([4,5]),np.array([5,4])])
+pca(X)
