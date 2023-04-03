@@ -48,7 +48,7 @@ jhirschb@hm.edu
 jorge_ivan.garcia_mejia@hm.edu
 
 ## Quellen
-"Datenanalyse Skript"
+"Datenanalyse Skript" "https://numpy.org/doc/stable/reference/generated/numpy.linalg.eig.html"
 
 ## Bemerkungen
 Was Sie sonst noch los werden wollen.

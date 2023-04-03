@@ -159,7 +159,7 @@ def pca(X):
     mittelt_X = np.array([mittelt_X_T for e in range(len(X))]) # Selbe Dimension wie B
 
         
-    
+    # Zentrieren der Daten
     B = X - mittelt_X
     
     B_T = np.transpose(B)
@@ -167,13 +167,20 @@ def pca(X):
     # Kovarianzmatrix
     C = B_T.dot(B)/(n - 1)
     
+    # QR-Zerlegung
+    # Q, R = np.linalg.qr(C)
+    # D ist die Diagonalmatrix der Eigenwerte
+    # D = np.diag(np.diag(np.dot(R, Q)))
+
+    # Eigenwertzerlegung
+    # D ist die Diagonalmatrix der Eigenwerte
+    # Q die Matrix der Eigenvektoren
+    D, Q = np.linalg.eig(C)
     
-    # Berechnung der Eigenwerte und Eigenvektoren
-    eig_vals, eig_vecs = np.linalg.eig(C)
     
     # Eigenwert-Eigenvektor-Paarung
     # Gesucht sind die Spalten vom Eingenvektor
-    eig_pairs = [(np.abs(eig_vals[i]), eig_vecs[:,i]) for i in range(len(eig_vals))]
+    eig_pairs = [(np.abs(D[i]), Q[:,i]) for i in range(len(D))]
     
     # Sortieren der Eigenwerte und -vektoren absteigend
     eig_pairs.sort(key=lambda x: x[0], reverse=True)
@@ -184,7 +191,7 @@ def pca(X):
     # Transformieren des zentrierten Datensatzes mit der Transformationsmatrix Q
     X_transformed = B.dot(np.transpose(Q))
     
-    return Q, eig_vals, X_transformed
+    return Q, D, X_transformed
 
 
 
