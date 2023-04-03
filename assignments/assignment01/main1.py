@@ -1,37 +1,48 @@
 import numpy as np
 import math
+from sklearn.decomposition import PCA
+
+np.random.seed(171717)
+x4 = np.random.randn(10000)
 # assignment 01
 
 # calculate arithmetic mean value of the numbers in x
-
-
 def mittel(x):
     x = np.array(x)
-    return sum(x)/(len(x))
+    return np.sum(x)/len(x)
 
 
 # calculate p-Quartil of numbers in x with given p
-def quartil(x, p):
+def quantil(x, p):
     x = np.array(x)
+    x.sort()
     n = len(x)
 
     # calculate "fractal index"
-    o = p*(n-1) + 1
+    o = p*(n-1)+1
 
     # gaussian bracket on o for easier use
     o_floor = math.floor(o)
 
-    # calculate quartil using given formula
-    return (1-(o-o_floor))*x[o_floor-1] + (o-o_floor)*x[o_floor]
+    d = o - o_floor
+    
+    #distinguish different cases
+    if n == 1 and  0<= p <= 1:
+        x_p = x[0]
 
+    elif n != 1 and p == 1:
+        x_p = x[-1] 
+
+    else:
+    # calculate quartil using given formula
+        x_p = (1-(d))*x[o_floor-1] + (d)*x[o_floor]
+    return x_p
 
 # calculate median of numbers in x
 def median(x):
     x = np.array(x)
+    x.sort()
     n = len(x)
-
-    # considering DRY you can calculate the median as a quartil with p = 0.5
-    # return quartil(x, 0.5)
 
     # calculating median through definition by cases
     # ternary operater for 1 line statement
@@ -46,72 +57,68 @@ def var(x):
     # get x_mean needed for s_sqr calculation
     x_mean = mittel(x)
     # get uncorrected samplevariance using given formula
-    s_sqr = (1/n) * sum((x-x_mean)**2)
+    s_sqr = np.sum((x-x_mean)**2)/n
     return s_sqr
 
 
-def regres(x, y):
+def regress(x, y):
+
     x = np.array(x)
     y = np.array(y)
     n = len(x)
+
     #get mean values of x and y
     x_mean = mittel(x)
     y_mean = mittel(y)
 
     #get empiric covariance
-    s_xy = (1/n)*sum((x-x_mean)*(y-y_mean))
-
-    #get uncorrected samplevariance from x
-    s_x_sqr = var(x)
+    s_xy = np.sum((x-x_mean)*(y-y_mean))/n
 
     #calculate slope beta
-    beta = (s_xy/s_x_sqr)
+    beta = float(s_xy/var(x))
 
     #calculate y-intercept
-    alpha = y_mean - beta*x_mean
+    alpha = float(y_mean - beta*x_mean)
 
     #calculate quadratic error
-    q = sum(y - ((alpha + beta * x)**2))
+    q = np.sum((y - (alpha + x*beta))**2)
     
     return (beta, alpha, q)
 
 
+def standardize_sign(Q):
+     Q = Q.copy()   # don't change Q
+     for col in Q.T:
+         for q in col:
+             if q > 0:
+                 break
+             if q < 0:
+                 col *= -1
+                 break
+     return Q
+
 def pca(X):
-    X_mean = []
-    X_T = np.transpose(X)
     n = len(X)
 
     #get mean array of X
-    for i in range(len(X_T)):
-        X_mean.append(np.array([mittel(X[i])]*n))
-    X_mean = np.array(X_mean).transpose()
-    
-    X_n = []
+    X_mean = X.mean(axis = 0)
+
     #get centered sample matrix
     B = X-X_mean
 
     #get sample covariance matrix
-    C = []
-    C.append((1/(n-1))*np.dot(np.transpose(B),B))
-    
-    #iterate  throught C to get diagonal matrix as long as cornerpoints are smaller than 1e-15
-    while(~np.all(np.abs(C[-1] - np.diag(np.diagonal(C[-1]))) < 1e-15)):
-        #QR-decomposition of C to get C_n+1
-        Q,R = np.linalg.qr(C[-1])
-        C.append(np.dot(R,Q))
+    C = (B.T @ B)/(n-1)
 
-    #append best diagonal matrix C to which equals to D = C[-1]
-    C.append(np.around(C[-1], 10))
-    D = C[-1]
+    #eigenvalues 
+    e_values, Q = np.linalg.eig(C)
 
-    #get Q, and R from last Matrix
-    Q,R = np.linalg.qr(C[-1])
-    
-    #get eigenvalues in descending order
-    v_lambda = np.linalg.eig(D)
-    v_lambda = np.sort(v_lambda[0])[::-1]
+    #sort in descending order
+    idx = e_values.argsort()[::-1]
+    e_values = e_values[idx]
+    Q = Q[:, idx]
 
-    return (Q,v_lambda, np.dot(X,Q))
+    Q = standardize_sign(Q)
+    return (Q, e_values, (B @ Q))
 
 
 
@@ -122,5 +129,5 @@ def pca(X):
 # print(median(x))
 # print(var(x))
 
-#X = np.array([np.array([1,2]),np.array([2,1]),np.array([3,3]),np.array([4,5]),np.array([5,4])])
-#print(pca(X))
+# X = np.array([np.array([1,2]),np.array([2,1]),np.array([3,3]),np.array([4,5]),np.array([5,4])])
+# print(pca(x4))
