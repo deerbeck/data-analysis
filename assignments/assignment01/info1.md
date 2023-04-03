@@ -53,7 +53,7 @@ jorge_ivan.garcia_mejia@hm.edu
 "Datenanalyse Skript"
 
 ## Bemerkungen
-Was Sie sonst noch los werden wollen.
+Einsenden trotz PCA-Failures zur Fehlersuche.
 
 ## Bestätigung
 Ich / wir bestätigen, dass wir nur die angegebenen Quellen benutzt haben.
