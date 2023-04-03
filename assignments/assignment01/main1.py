@@ -100,13 +100,18 @@ def pca(X):
         Q,R = np.linalg.qr(C[-1])
         C.append(np.dot(R,Q))
 
-    #append best diagonal matrix C to 
+    #append best diagonal matrix C to which equals to D = C[-1]
     C.append(np.around(C[-1], 10))
+    D = C[-1]
 
-    #get diagonal matrix containing eigenvalues
-    D = np.dot(np.dot(np.transpose(Q),C),Q)
+    #get Q, and R from last Matrix
+    Q,R = np.linalg.qr(C[-1])
+    
+    #get eigenvalues in descending order
+    v_lambda = np.linalg.eig(D)
+    v_lambda = np.sort(v_lambda[0])[::-1]
 
-    pass
+    return (Q,v_lambda, np.dot(X,Q))
 
 
 
@@ -117,5 +122,5 @@ def pca(X):
 # print(median(x))
 # print(var(x))
 
-X = np.array([np.array([1,2]),np.array([2,1]),np.array([3,3]),np.array([4,5]),np.array([5,4])])
-pca(X)
+#X = np.array([np.array([1,2]),np.array([2,1]),np.array([3,3]),np.array([4,5]),np.array([5,4])])
+#print(pca(X))
