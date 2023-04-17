@@ -406,8 +406,21 @@ class Results:
             print(ppstr.replace("'...'", "..."), file=stream)
         else:
             pprint.pprint(joined_keys_dict, stream)
- 
 
+    
+def standardize_sign(QlY):
+    # return QlY
+    Q, l, Y = QlY
+    # calculate diagonal matrix with eigenvalues ±1 to correct signs of Q and Y
+    D = np.identity(len(Q))
+    for i, col in enumerate(Q.T):
+        for q in col:
+            if q > 0:
+                break
+            if q < 0:
+                D[i, i] = -1
+                break
+    return Q @ D, l, Y @ D
 
 
 class Test_Praktikum(Test_Numerik):
@@ -426,6 +439,7 @@ class Test_Praktikum(Test_Numerik):
             return np.random.random(n*m).reshape(n,m)
         else:
             return np.random.random(n*m).reshape(n,m) + np.random.random(n*m).reshape(n,m) * 1j
+
 
     np.random.seed(171717)
     x1 = [17]
@@ -474,7 +488,7 @@ class Test_Praktikum(Test_Numerik):
     def test_pca(self):
         for a, name in self.data_name_pairs_X:
             with self.subTest(msg=f'PCA ist nicht korrekt für X={name}.', X=a, name=name):
-                self.runner(main.pca, (a, ), self.assertAlmostEqualRelative)
+                self.runner(main.pca, (a, ), self.assertAlmostEqualRelative, post=standardize_sign)
             
     def test_Dateikonsistenz(self):
         for file in files_tested_for_correctness:
