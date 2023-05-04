@@ -135,20 +135,29 @@ def Aufgabe_Verteilungen():
 
 def rel_variance_of_mean(rng, distr, no_samples, no_runs):
     X = distr(rng, no_samples*no_runs).reshape(no_samples, no_runs)
+
     # Hier Berechnunge der Mittelwerte über die Spalten von X
+    X_mean = np.mean(X,axis= 0)
     # und Berechnung der Varianzen
-    return dummy
+    X_var = np.var(X_mean)
+
+    X_var_tot = np.var(X.flatten())
+
+    return np.array([X_var/X_var_tot])
 
 def Aufgabe_GdgZ():
     """Hier sollen die relativen Varianzen in Abhängigkeit von der Anzahl der 
     Samples (no_samples) geplottet werden."""
-    no_runs = 100
-    # Als Plotbefehle könnten Sie folgendes nutzen:
-    # for distr in distributions:
-    #     ...
-    #     plt.plot(No_samples, Variances, label=distr.__name__, alpha=0.5)
-    # plt.legend()
-    # plt.show()
+    no_runs = 1000
+
+    No_samples = np.arange(1,101,1)
+    
+    #Als Plotbefehle könnten Sie folgendes nutzen:
+    for distr in distributions:
+        Variances = [rel_variance_of_mean(rng,distr,samples, no_runs) for samples in No_samples]
+        plt.plot(No_samples, Variances,"o", label=distr.__name__, alpha=0.5)
+    plt.legend()
+    plt.show()
 
 
 
@@ -156,13 +165,25 @@ def Aufgabe_GdgZ():
 
 def centralized_sample(rng, distr, no_samples, no_runs):
     X = distr(rng, no_samples*no_runs).reshape(no_samples, no_runs)
+
+    #get mean and std of given distribution by using law of large numbers:
+    sample = distr(rng,10**4)
+    S_mean = np.mean(sample)
+    S_std = np.std(sample)
+
+
     # Berechnung der zentralisierten Zufallsvariable aus den Spalten von X
-    return adummy(no_runs)
+    S_sum = np.sum(X, axis = 0)
+
+    Z_n = (S_sum - no_samples *S_mean) / (S_std * np.sqrt(no_samples))
+
+
+    return Z_n
 
 def Aufgabe_ZGWS():
     no_runs = 10**6
-    n = 3
-    N = np.arange(1, n+1)
+    n = 105
+    N = np.arange(100, n+1)
     bins = 100
     for distr in distributions:
         for n in N:
@@ -172,15 +193,29 @@ def Aufgabe_ZGWS():
         plt.show()
         
 
+###   Konfiguration von test2.py durch Dictionary 'test_control'
+
+# Folgendees Beispiel schaltet 'test_ZGWS' und 'test_GdgZ' aus
+# und testet nur die erste Verteilung 'normal_10_3'.
+
+# test_control = {
+#     'test_Verteilungen': [],
+#     'test_ZGWS':         [],
+#     'test_GdgZ':         [1,2,3,4,5],
+#     }
+
 
 ###   Ausführen der Bearbeitungen
 if __name__ == '__main__':
 
-    Aufgabe_Bayes()
+    # Aufgabe_Bayes()
 
-    #Testing:
-    normal_10_3(rng,100)
-    uniform_100_10(rng,100)
-    Aufgabe_Verteilungen()
+    # #Testing:
+    # normal_10_3(rng,100)
+    # uniform_100_10(rng,100)
+    # Aufgabe_Verteilungen()
+
+
     # Aufgabe_GdgZ()
-    # Aufgabe_ZGWS()
+    Aufgabe_ZGWS()
+

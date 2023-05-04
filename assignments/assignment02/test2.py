@@ -542,7 +542,7 @@ data = {
 rng = np.random.default_rng(171717)
 # rng = np.random.default_rng()   # uncomment this for randomness
 quick_and_dirty = False
-# quick_and_dirty = True          # uncomment this for speed-up
+quick_and_dirty = True          # uncomment this for speed-up
 
 class Test_Praktikum(Test_Numerik):
     
