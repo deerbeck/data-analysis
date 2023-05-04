@@ -5,7 +5,7 @@ Spyder Editor
 This is a temporary script file.
 """
 import numpy as np
-import math
+
 
 # mittel(x): Berechnung und Rueckgabe des arithmetischen Mittels der Zahlen in x. Dabei soll x ein iterable,
 # also etwa eine Liste oder ein numpy-Vector con Zahalen sein
@@ -15,7 +15,7 @@ def mittel(x):
     x = np.array(x)
     n = len(x)
 
-    x_mittel = sum(x)/n
+    x_mittel = np.sum(x)/n
     
     return x_mittel
 
@@ -50,7 +50,7 @@ def quantil(x,p):
         x_p = (1 - p)*x[o] + p*x[o + 1]
     
     
-    return x_p
+    return np.quantile(x,p)
 
 
 
@@ -94,7 +94,7 @@ def var(x):
     x_mittel = mittel(x)
     
         
-    var = sum((x - x_mittel)**2)/n
+    var = np.sum((x - x_mittel)**2)/n
         
     
     return var
@@ -114,7 +114,7 @@ def regress(x, y):
     
     # Empirische Kovarianz
     
-    s_xy = sum(((x - mittel(x))*(y - mittel(y))))/n
+    s_xy = np.sum(((x - mittel(x))*(y - mittel(y))))/n
     
        
     # Steigung
@@ -129,7 +129,7 @@ def regress(x, y):
     
     # Quadratische Fehler
         
-    Q = sum((y - (alfa + B*x))**2)
+    Q = np.sum((y - (alfa + B*x))**2)
 
     
     return (B, alfa, Q)
@@ -144,52 +144,107 @@ def pca(X):
     
     X = np.array(X)
     
-    n = len(X)
+    #n = len(X)
     
     # X transponiert
-    X_T = np.transpose(X)
+    #X_T = np.transpose(X)
     
-    mittelt_X_T = []
+    #mittelt_X_T = []
     
-    for X_T_i in X_T:
+    #for X_T_i in X_T:
         
-        mittelt_X_T.append(mittel(X_T_i))
+        #mittelt_X_T.append(mittel(X_T_i))
     
     
-    mittelt_X = np.array([mittelt_X_T for e in range(len(X))]) # Selbe Dimension wie B
+    #mittelt_X = np.array([mittelt_X_T for e in range(len(X))]) # Selbe Dimension wie B
 
         
+    # Zentrieren der Daten
+    #B = X - mittelt_X
+    B = X - X.mean(axis=0)
     
-    B = X - mittelt_X
-    
-    B_T = np.transpose(B)
+    B_T = B.T
     
     # Kovarianzmatrix
-    C = B_T.dot(B)/(n - 1)
+    C = B_T@B/(len(B) - 1)
+    
+    # QR-Zerlegung
+    # Q, R = np.linalg.qr(C)
+    # D ist die Diagonalmatrix der Eigenwerte
+    # D = np.diag(np.diag(np.dot(R, Q)))
+
+    # Eigenwertzerlegung
+    # D ist die Diagonalmatrix der Eigenwerte
+    # Q die Matrix der Eigenvektoren
+    D, Q = np.linalg.eig(C)
     
     
-    # Berechnung der Eigenwerte und Eigenvektoren
-    eig_vals, eig_vecs = np.linalg.eig(C)
+    # Suche nach den richtigen Index
+    idx = D.argsort()[::-1]
     
     # Eigenwert-Eigenvektor-Paarung
     # Gesucht sind die Spalten vom Eingenvektor
-    eig_pairs = [(np.abs(eig_vals[i]), eig_vecs[:,i]) for i in range(len(eig_vals))]
+    D, Q = D[idx], Q[:,idx]
     
-    # Sortieren der Eigenwerte und -vektoren absteigend
-    eig_pairs.sort(key=lambda x: x[0], reverse=True)
+    # Transformieren des zentrierten Datensatzes
+    X_transformed = B@Q
     
-    # Konstruktion der Transformationsmatrix Q aus den sortierten Eigenvektoren
-    Q = np.column_stack([e[1] for e in eig_pairs])
-    
-    # Transformieren des zentrierten Datensatzes mit der Transformationsmatrix Q
-    X_transformed = B.dot(np.transpose(Q))
-    
-    return Q, eig_vals, X_transformed
+    return Q, D, X_transformed
 
 
 
 
 if __name__ == '__main__':
+    
+    
+    X = np.array([[1,2],[2,1],[3,3],[4,5],[5,4]])
+
+    
+    B = X - X.mean(axis=0)
+    
+    
+    B_T = B.T
+    
+    
+    # Kovarianzmatrix
+    C = B_T@B/(len(B) - 1)
+    print(C)
+    print("")
+    
+    D, Q = np.linalg.eig(C)
+    print(Q)
+    print("")
+    print(D)
+    print("")
+    # Suche nach den richtigen Index
+    idx = D.argsort()[::-1]
+    
+    # Eigenwert-Eigenvektor-Paarung
+    # Gesucht sind die Spalten vom Eingenvektor
+    D, Q = D[idx], Q[:,idx]
+    print(Q)
+    print("")
+    print(D)
+    
+    
+    Q, D, X_transformed=pca(X)
+    print(Q)
+    print("")
+    print(D)
+    #print("")
+    #print(X_transformed)
+    
+    
+    
+    
+    #eig_pairs = [(np.abs(D[i]), Q[:,i]) for i in range(len(D))]
+    
+    # Sortieren der Eigenwerte und -vektoren absteigend
+    #eig_pairs.sort(key=lambda x: x[0], reverse=True)
+    
+    # Konstruktion der Transformationsmatrix Q aus den sortierten Eigenvektoren
+    #Q = np.column_stack([e[1] for e in eig_pairs])
+    
     pass
     
     

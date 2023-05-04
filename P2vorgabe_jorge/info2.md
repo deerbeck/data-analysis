@@ -48,10 +48,10 @@ jhirschb@hm.edu
 jorge_ivan.garcia_mejia@hm.edu
 
 ## Quellen
-"Datenanalyse Skript" "https://numpy.org/doc/stable/reference/generated/numpy.linalg.eig.html"
+"Datenanalyse Skript", https://numpy.org/doc/stable/reference/random/generated/numpy.random.multinomial.html, https://numpy.org/doc/stable/reference/random/generated/numpy.random.normal.html, https://numpy.org/doc/stable/reference/random/generator.html, https://numpy.org/doc/stable/reference/generated/numpy.std.html, https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.zscore.html
 
 ## Bemerkungen
 Was Sie sonst noch los werden wollen.
 
 ## Bestätigung
-Wir bestätigen, dass wir nur die angegebenen Quellen benutzt haben.
+Ich / wir bestätigen, dass wir nur die angegebenen Quellen benutzt haben.
