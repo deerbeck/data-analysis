@@ -196,6 +196,47 @@ def pca(X):
 
 if __name__ == '__main__':
     
+    
+    X = np.array([[1,2],[2,1],[3,3],[4,5],[5,4]])
+
+    
+    B = X - X.mean(axis=0)
+    
+    
+    B_T = B.T
+    
+    
+    # Kovarianzmatrix
+    C = B_T@B/(len(B) - 1)
+    print(C)
+    print("")
+    
+    D, Q = np.linalg.eig(C)
+    print(Q)
+    print("")
+    print(D)
+    print("")
+    # Suche nach den richtigen Index
+    idx = D.argsort()[::-1]
+    
+    # Eigenwert-Eigenvektor-Paarung
+    # Gesucht sind die Spalten vom Eingenvektor
+    D, Q = D[idx], Q[:,idx]
+    print(Q)
+    print("")
+    print(D)
+    
+    
+    Q, D, X_transformed=pca(X)
+    print(Q)
+    print("")
+    print(D)
+    #print("")
+    #print(X_transformed)
+    
+    
+    
+    
     #eig_pairs = [(np.abs(D[i]), Q[:,i]) for i in range(len(D))]
     
     # Sortieren der Eigenwerte und -vektoren absteigend
