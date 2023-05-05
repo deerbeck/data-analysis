@@ -539,8 +539,8 @@ data = {
         main.mixed_normal_11:    (  -1, 102, 10, mixed_normal_11_cdf),       # a, b, bins, cdf
        }
 
-rng = np.random.default_rng(171717)
-# rng = np.random.default_rng()   # uncomment this for randomness
+#rng = np.random.default_rng(171717)
+rng = np.random.default_rng()   # uncomment this for randomness
 #quick_and_dirty = False
 quick_and_dirty = True          # uncomment this for speed-up
 
