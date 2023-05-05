@@ -245,16 +245,7 @@ def Aufgabe_ZGWS():
 # Ausführen der Bearbeitungen
 if __name__ == '__main__':
 
-    # Aufgabe_Bayes()
-
-    # #Testing:
-    # normal_10_3(rng,100)
-    # uniform_100_10(rng,100)
-    # Aufgabe_Verteilungen()
-
-    #rel_variance_of_mean(rng, mixed_normal_11, 100, 1000)
-    #Aufgabe_GdgZ()
-    
+    Aufgabe_Bayes()
+    Aufgabe_Verteilungen()
+    Aufgabe_GdgZ()
     Aufgabe_ZGWS()
-    #0.020158 != 0.022605 within 0.00113025 delta (0.0024470000000000013 difference)
-    ##ZGWS ist nicht korrekt für Verteilung normal_10_3 und Anzahl 3.
