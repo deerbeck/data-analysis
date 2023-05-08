@@ -227,15 +227,13 @@ def Aufgabe_GdgZ():
 def centralized_sample(rng, distr, no_samples, no_runs):
     X = distr(rng, no_samples*no_runs).reshape(no_samples, no_runs)
 
-    # get mean and std of given distribution by using law of large numbers:
-    sample = distr(rng, 10**6)
-    S_mean = np.around(np.mean(sample),2)
-    S_std = np.around(np.std(sample),2)
-
     # Berechnung der zentralisierten Zufallsvariable aus den Spalten von X
-    S_sum = np.sum(X, axis=0)
+    # 3 Vectors
+    S_sum = np.sum(X, axis = 0)
+    S_mean = np.mean(S_sum) # = n*y
+    S_std = np.std(S_sum) # sqrt(n)*sigma
 
-    Z_n = (S_sum - no_samples * S_mean) / (S_std * np.sqrt(no_samples))
+    Z_n = (S_sum -  S_mean) / (S_std)
 
     return Z_n
 
@@ -271,6 +269,6 @@ def Aufgabe_ZGWS():
 if __name__ == '__main__':
 
     #Aufgabe_Bayes()
-    Aufgabe_Verteilungen()
+    #Aufgabe_Verteilungen()
     #Aufgabe_GdgZ()
-    #Aufgabe_ZGWS()
+    Aufgabe_ZGWS()
