@@ -106,6 +106,7 @@ def uniform_100_10(rng, n):
 def mixed_normal(rng, n, M, S, P):
     """M, S, P sind Listen gleicher Länge von Mittelwerten, Standardabweichungen
     und Wahrscheinlichkeiten. Siehe unten für Argumente und Benutzung von mixed_normal(...)"""
+    # ## Einfache implementierung über Numpy Funktionen
     # Mittelwerten/Erwartungs wert: M
     M = np.array(M)
 
@@ -114,18 +115,42 @@ def mixed_normal(rng, n, M, S, P):
 
     # Wahrscheinlichkeiten: P
     P = np.array(P)
+    
+    #
+    k = len(M)
 
-    # Generate the mixture probabilities for each sample
-    mixture_probs = rng.multinomial(1, P, size=n)   # array size n x len(P)
+    # choose indices for each i in [1,2,3,....,k] using the probability given for that index through P
+    # vector with size = n
+    idx = rng.choice(k, size=n, p=P)
 
-    # Generate random samples from each Gaussian distribution
-    # array size n x len(M)    M, S, and P same size
-    samples = rng.normal(M, S, size=(n, len(M)))
+    # choose the mean and standard.. given the selected indices before
+    means = np.take(M, idx)
+    stds = np.take(S, idx)
 
-    # Compute the weighted sum of the samples using the mixture probabilities
-    mixed_samples = np.sum(mixture_probs * samples, axis=1)
+    #calculate the normal distrubution using the chosen values
+    return rng.normal(means, stds, n)
 
-    return mixed_samples
+    # # Mittelwerten/Erwartungs wert: M   
+    # M = np.array(M)
+    
+    # # Standardabweichungen. S
+    # S = np.array(S)
+    
+    # # Wahrscheinlichkeiten: P
+    # P = np.array(P)
+    
+    # # Generate the mixture probabilities for each sample
+    # mixture_probs = rng.multinomial(1, P, size=n)   # array size n x len(P)
+    
+    # # Generate random samples from each Gaussian distribution
+
+    # idx = np.argmax(mixture_probs == 1, axis=1)
+
+    # means = np.take(M, idx)
+    # std = np.take(S, idx)
+
+    # return rng.normal(means,std,n)
+
 
 
 def mixed_normal_2(rng, n):
@@ -245,7 +270,7 @@ def Aufgabe_ZGWS():
 # Ausführen der Bearbeitungen
 if __name__ == '__main__':
 
-    Aufgabe_Bayes()
+    #Aufgabe_Bayes()
     Aufgabe_Verteilungen()
-    Aufgabe_GdgZ()
-    Aufgabe_ZGWS()
+    #Aufgabe_GdgZ()
+    #Aufgabe_ZGWS()
