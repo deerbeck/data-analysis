@@ -33,25 +33,24 @@
 # Daten zur Abgabe und zur Aufgabengenerierung
 
 ## Team
-Teamname
+Die zwei lustigen Drei
 
 ## Teilnehmer:in 1
-Nachname(n), Vorname(n)
+Hirschbeck, Johannes
 
 ## Teilnehmer:in 2
-Nachname(n), Vorname(n)
+Garcia Mejia, Jorge Ivan
 
 ## Email 1
-Emailadresse von Teilnehmer:in 1
+jhirschb@hm.edu
 
 ## Email 2
-Emailadresse von Teilnehmer:in 2
+jorge_ivan.garcia_mejia@hm.edu
 
 ## Quellen
-Geben Sie hier an, wo Sie sich Hilfe geholt haben,
-z.B. "Code von https://de.wikipedia.org/wiki/Plagiat",
-oder z.B. "Methode xyz von Team Ahnungslos"
-oder z.B. "keine".
+"https://www.w3schools.com/python/default.asp"
+"P3.pdf"
+"Datenanalyse Skript"
 
 ## Bemerkungen
 Was Sie sonst noch los werden wollen.
