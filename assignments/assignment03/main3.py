@@ -17,6 +17,7 @@ def L(theta, x, f):
 def l(theta, x, f):
     return np.sum(np.log(f(x,theta)))
 
+
 def MLE(x, f, theta0, method=None, log=False, return_status=False):
     """"Calculate MLE numerically.
     x iterable: sample,
@@ -48,7 +49,7 @@ def define_model_test_data(rng):
              'normal': (                                            # normal distribution
                     (1.0, 0.1),                                     # theta for generation
                     lambda theta, n: rng.normal(theta[0], theta[1], n),
-                    lambda x, theta: st.norm.pdf(x, loc = theta[0], scale = theta[1]),
+                    lambda x, theta: st.norm.pdf(x,loc=theta[0],scale=theta[1]),
                     lambda x: (np.mean(x), np.sqrt((1/len(x))*np.sum((x-np.mean(x))**2))),
                     (0, 1),                                         # initial guess theta0
                     ),    
@@ -146,8 +147,8 @@ def interval_normal_mu_sigma_sample(alpha, x):
 
 
 if __name__ == "__main__":
-    #test_MLE_precision(np.random.default_rng(171717))
-    print(interval_normal_mu(0.01,5,50,47))
+    test_MLE_precision(np.random.default_rng(171717))
+    
 
     # test_data = define_model_test_data(np.random.default_rng(171717))
     # N = 100
