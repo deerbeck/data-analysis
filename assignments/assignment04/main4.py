@@ -39,19 +39,146 @@ def plot_empiric_normal(rng):
     plt.grid(True)
     plt.show()
 
+def chi_squared(rng):
+    # Augenzahlen auf dem Würfel
+    dice_faces = [1, 2, 3, 4, 5, 6]
+
+    # Wahrscheinlichkeiten für den unverfälschten Würfel
+    p_unbiased = np.ones(6) / 6
+
+    # Wahrscheinlichkeiten für den gezinkten Würfel (Augenzahl 6 hat um 50% erhöhte Häufigkeit)
+    p_biased = np.array([3/20, 3/20, 3/20, 3/20, 3/20, 1.5/6])
+
+    # Stichprobengrößen
+    sample_sizes = [10, 20, 50, 100, 200, 500, 1000]
+
+    # Signifikanzniveau
+    alpha = 0.05
+
+    critical_value = st.chi2.ppf(1 - alpha, df=len(dice_faces)-1)
+
+    N = 10000
+    accept_rate_unbiased = np.zeros(len(sample_sizes))
+    accept_rate_biased = np.zeros(len(sample_sizes))
+    j = 0
+    for n in sample_sizes:
+        
+
+        accepted_biased = 0
+        accepted_unbiased = 0
+        
+        all_qn_biased = np.zeros(N)
+        all_qn_unbiased = np.zeros(N)
+
+        for i in range(N):
+            sample_unbiased = rng.multinomial(n, p_unbiased)
+            sample_biased = rng.multinomial(n, p_biased)
+
+
+            qn_unbiased = (np.sum(((sample_unbiased-n*p_unbiased)**2)/(n*p_unbiased)))
+            all_qn_unbiased[i] = qn_unbiased
+
+            # hier muss als wahrscheinlichkeit trotzdem p_unbiased verwendet werden, da die Nullhypothese ist, dass der Würfel OK ist
+            qn_biased = (np.sum(((sample_biased-n*p_unbiased)**2)/(n*p_unbiased)))
+            all_qn_biased[i] = qn_biased
+
+            if qn_biased < critical_value:
+                accepted_biased += 1
+            if qn_unbiased < critical_value:
+                accepted_unbiased += 1
+
+            p_value_unbiased = 1- st.chi2.cdf(qn_unbiased, df=len(dice_faces)-1)
+            p_value_biased = 1- st.chi2.cdf(qn_biased, df=len(dice_faces)-1)
+
+        accept_rate_unbiased[j] = accepted_unbiased / N
+        accept_rate_biased[j] = accepted_biased / N
+        j += 1
+
+        # Histogramm der Teststatistik Qn für den unverfälschten Würfel
+        plt.figure()
+        plt.hist(all_qn_unbiased, bins=30, density=True, alpha=0.7, label='Empirisch')
+        x = np.linspace(0, np.max(all_qn_unbiased), 100)
+        plt.plot(x, st.chi2.pdf(x, df=5), 'r-', lw=2, label='Chi-Quadrat-Verteilung')
+        plt.xlabel('Teststatistik Qn')
+        plt.ylabel('Dichte')
+        plt.title(f'Histogramm und Dichte für n = {n} (Unverfälschter Würfel)')
+        plt.legend()
+        plt.show()
+        
+        # Empirische Verteilungsfunktion der Teststatistik Qn für den unverfälschten Würfel
+        plt.figure()
+        plt.plot(np.sort(all_qn_unbiased), np.arange(1, N+1) / N, label='Empirisch')
+        plt.plot(x, st.chi2.cdf(x, df=5), 'r-', lw=2, label='Chi-Quadrat-Verteilung')
+        plt.xlabel('Teststatistik Qn')
+        plt.ylabel('Empirische Verteilungsfunktion')
+        plt.title(f'Empirische Verteilungsfunktion für n = {n} (Unverfälschter Würfel)')
+        plt.legend()
+        plt.show()
+        
+        # Histogramm der Teststatistik Qn für den gezinkten Würfel
+        plt.figure()
+        plt.hist(all_qn_biased, bins=30, density=True, alpha=0.7, label='Empirisch')
+        plt.plot(x, st.chi2.pdf(x, df=5), 'r-', lw=2, label='Chi-Quadrat-Verteilung')
+        plt.xlabel('Teststatistik Qn')
+        plt.ylabel('Dichte')
+        plt.title(f'Histogramm und Dichte für n = {n} (Gezinkter Würfel)')
+        plt.legend()
+        plt.show()
+        
+        # Empirische Verteilungsfunktion der Teststatistik Qn für den gezinkten Würfel
+        plt.figure()
+        plt.plot(np.sort(all_qn_biased), np.arange(1, N+1) / N, label='Empirisch')
+        plt.plot(x, st.chi2.cdf(x, df=5), 'r-', lw=2, label='Chi-Quadrat-Verteilung')
+        plt.xlabel('Teststatistik Qn')
+        plt.ylabel('Empirische Verteilungsfunktion')
+        plt.title(f'Empirische Verteilungsfunktion für n = {n} (Gezinkter Würfel)')
+        plt.legend()
+        plt.show()
+        
+    ##Annahme Rate Plotten
+    # Plot der Annahmeraten
+    x = np.arange(len(sample_sizes))  # x-Koordinaten für die Balken
+    width = 0.35  # Breite der Balken
+
+    fig, ax = plt.subplots()
+    rects1 = ax.bar(x - width/2, accept_rate_unbiased, width, label='Unverfälschter Würfel')
+    rects2 = ax.bar(x + width/2, accept_rate_biased, width, label='Gezinkter Würfel')
+
+    ax.set_ylabel('Annahmerate')
+    ax.set_title('Annahmeraten für verschiedene Stichprobengrößen')
+    ax.set_xticks(x)
+    ax.set_xticklabels(sample_sizes)
+    ax.legend()
+
+    # Automatische Anpassung des Layouts, um Überlagerungen zu vermeiden
+    fig.tight_layout()
+
+    plt.show()
+    
+
+
+
 alpha = 0.05  
 
 def KS(X, mu, sigma):
-    return True
+    # Kolmogorow-Smirnov-Test
+    _, p_value = st.kstest(X, 'norm', args=(mu, sigma))
+    return p_value >= 0.05
 
 def LF(X):
-    return True
+    # Lilliefors-Test
+    _, p_value = lilliefors(X, dist='norm')
+    return p_value >= 0.05
 
 def SW(X):
-    return True
+    # Shapiro-Wilk-Test
+    _, p_value = st.shapiro(X)
+    return p_value >= 0.05
 
 def AD(X):
-    return True
+     # Anderson-Darling-Test
+    result = st.anderson(X)
+    return result.statistic <= result.critical_values[2]
 
 tests = [KS, LF, SW, AD]
 
@@ -72,38 +199,39 @@ def Uniform(a, b):
 def Beta(p, q):
     """Beta-Verteilung"""
     def distr(n):
-        return n*[0]
+        return rng.beta(p, q, n)
     distr.__name__ = f'beta_{p}_{q}'
-    return distr, 0, 0
+    return distr,  p/(p+q), np.sqrt((p*q)/((p+q)**2 * (p+q+1)))
 
 def T(N):
     """Studentsche t-Verteilung"""
     def distr(n):
-        return n*[0]
+        return rng.standard_t(N, n)
     distr.__name__ = f't_{N}'
-    return distr, 0, 0
+    return distr, 0, np.sqrt(N/(N-2))
 
 def Laplace(mu, sigma):
     """Laplace-Verteilung"""
     def distr(n):
-        return n*[0]
+        return rng.laplace(mu, sigma, n)
     distr.__name__ = f'laplace_{mu}_{sigma}'
-    return distr, 0, 0
+    return distr, mu, np.sqrt(2)*sigma
 
 def Chi2(N):
     """Chi-Quadrat-Verteilung"""
     def distr(n):
-        return n*[0]
+        return rng.chisquare(N, n)
+        
     distr.__name__ = f'chi2_{N}'
-    return distr, 0, 0
+    return distr, N, np.sqrt(2)*N
 
 def Gamma(a, b):
     """Gamma-Verteilung"""
     k, theta = a, 1/b
     def distr(n):
-        return n*[0]
+        return rng.gamma(a,1/b,n)
     distr.__name__ = f'gamma_{a}_{b}'
-    return distr, 0, 0
+    return distr, a/b, np.sqrt(a)/b
 
 distributions = [
                     Normal(3, 9),
@@ -191,4 +319,7 @@ def test_tests(verbose=True, savefig=False):
 
         
 if __name__ == "__main__":
-    plot_empiric_normal(rng)
+    #plot_empiric_normal(rng)
+    #chi_squared(rng)
+
+    test_tests()
