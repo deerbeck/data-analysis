@@ -223,7 +223,7 @@ def Chi2(N):
         return rng.chisquare(N, n)
         
     distr.__name__ = f'chi2_{N}'
-    return distr, N, np.sqrt(2)*N
+    return distr, N, np.sqrt(2*N)
 
 def Gamma(a, b):
     """Gamma-Verteilung"""
@@ -249,8 +249,8 @@ distributions = [
 
 # N = 100000   # takes ca. 10h
 # N = 10000    # takes ca. 1h
-N = 1000       # takes ca. 6min
-# N = 100      # takes 40s, not accurate
+# N = 1000       # takes ca. 6min
+N = 100      # takes 40s, not accurate
 # N = 10       # takes 5s, not accurate
       
 def true_rates(n, distribution):
