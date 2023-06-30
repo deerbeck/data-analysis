@@ -317,15 +317,15 @@ def centralized_sample(rng, distr, no_samples, no_runs):
     #print("Sn:", Sn)
     
     
-    S = distr(rng,10**4)  # Samples
+    S = distr(rng,10**6)  # Samples
     
     # Mean value: Mittelwert µ: an array([5, 7, 2, ...no_runs])
-    µ = np.mean(S, axis=0)
+    µ = np.around(np.mean(S, axis=0),2)
     #print("µ:", µ)
     
     
     # Standardabweichung
-    σ = np.std(S, axis=0) # Here an array, with one element per column of X. One-dimensional array with no_runs elements
+    σ = np.around(np.std(S, axis=0),2) # Here an array, with one element per column of X. One-dimensional array with no_runs elements
     #print("σ:", σ)
     
     
