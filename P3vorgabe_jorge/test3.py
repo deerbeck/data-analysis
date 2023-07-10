@@ -19,13 +19,11 @@ import base64
 import collections
 import contextlib
 from itertools import product
-from scipy.stats import norm
-from scipy.stats import uniform
-from scipy.stats import chi2
+import scipy.stats as st
 
 
 
-P_number = 2
+P_number = 3
 exec('import main{}'.format(P_number))
 exec('main = main{}'.format(P_number))
 # exec('import lib{}'.format(P_number))
@@ -87,9 +85,13 @@ class Test_Numerik(unittest.TestCase):
     def assertLessEqualMultiple(self, result, true_value, multiple=2, **kwargs):
         self.assertLessEqual(result, true_value * multiple, **kwargs)
     
-    def assertEqualComponent(self, result, true_value, index=0, **kwargs):
+    def assertCheckCounts(self, a, b, prec=3, **kwargs):
+        # self.assertTrue(all([min(a[i], b[i]) >= prec*max(a[i], b[i]) for i in range(len(a))]), msg=f'result={a} != {b}=true_value', **kwargs)
+        self.assertTrue(all(abs(a[i] - b[i]) <= prec for i in range(len(a))), msg=f'result={a} != {b}=true_value', **kwargs)
+            
+    def assertEqualComponent(self, result, true_value, index=0, msg_function=lambda x: x, **kwargs):
         msg = kwargs.pop('msg')
-        self.assertEqual(result[index], true_value[index], msg=msg.format(result), **kwargs)
+        self.assertEqual(result[index], true_value[index], msg=msg.format(msg_function(result)), **kwargs)
     
     def assertLessEqualConstant(self, result, true_value, constant=1, **kwargs):
         self.assertLessEqual(result, constant, **kwargs)
@@ -447,8 +449,10 @@ class Results:
 
     
 import_block = """
-      import numpy as np
-      import matplotlib.pyplot as plt
+    import numpy as np
+    from scipy.optimize import minimize
+    import scipy.stats as st
+    import warnings
 """
 
 def find_import(code, import_block=import_block):
@@ -458,91 +462,63 @@ def find_import(code, import_block=import_block):
         code = re.sub(re_line, '', code)
     return [m.group() for m in re.finditer(r'.*import.*', code)]      # return lines that contain import statement
 
-def mixed_normal_cdf(M, S, P):
-    assert len(M) == len(S)
-    assert 0 <= len(M) - len(P) <= 1
-    if len(P) < len(M):
-        P = np.append(P, [0])   # last element is automatically corrected by np.random.multinomial
-    def cdf(x):
-        return np.sum(np.array([norm(m, s).cdf(x) for m, s in zip(M, S)]) * P)
-    return cdf
+def Bisektion(f, a, b, eps):
+    assert f(a) * f(b) < 0, 'Die Funktionswerte f(a) und f(b) müssen verschiedene Vorzeichen haben.'
+    while True:
+        mitte = (a + b) / 2
+        if abs(f(mitte)) <= eps:
+            return mitte
+        if f(a) * f(mitte) < 0:
+            b = mitte
+        else:
+            a = mitte
 
-data = [(-4, 4), (2, 4), (0.5, 0.5)]
-mixed_normal_2_cdf = mixed_normal_cdf(*data)
+def uniform_prob_bin_edges(cdf, bins):
+    """Return vector of bin edges (bins-1 many) such that we have bins many bins with
+    the two outer most beeing infinitely long such that the probabilities of
+    the bins according to the cumulative distribution function cdf are 1/bins,
+    i.e. uniformly distributed."""
+    assert bins >= 1, 'At least two bins are needed.'
+    prob = 1/bins
+    a, b = -1, 1
+    while cdf(a) >= prob: a *= 2
+    while cdf(b) <= 1 - prob: b *= 2
+    edges = np.empty(bins - 1)
+    for i in range(1, bins):
+        edges[i-1] = Bisektion(lambda x: cdf(x) - i*prob, a, b, 10**-10)
+    return edges
 
-data = [(-5, 0, 5), (1, 1, 1), (1/3, 1/3, 1/3)]
-mixed_normal_3_cdf = mixed_normal_cdf(*data)
+def hist_full(X, edges):
+    """Return histogram with bins-many bins spaced according to edges with
+    two bins left of edges[0] and right of edges[-1]."""
+    hist = np.histogram(X, bins=edges)[0]
+    return np.array([np.sum(X<edges[0])] + list(hist) + [np.sum(X>edges[-1])])
 
-M = np.linspace(0, 100, 11)
-S = np.linspace(2, 5, 11)
-P = np.array([50, 41, 34, 29, 26, 25, 26, 29, 34, 41, 50]) / 385
-data = M, S, P
-mixed_normal_11_cdf = mixed_normal_cdf(*data)
-
-def bins_probs_full(cdf, bins, a, b):
-    """Return vector of probabilities according to the cumulative distribution function
-    cdf of length bins+2 for the probabilities of "beeing <= a", "beeing in interval
-    [a+hi, a+h(i+1) for h=(b-a)/bins and i in range(bins)" and "beeing >= b"."""
-    probs = np.empty(bins+2)
-    probs[0] = cdf(a)
-    probs[-1] = 1 - cdf(b)
-    edges = np.linspace(a, b, bins + 1)
-    probs[1:-1] = [cdf(r) - cdf(l) for l, r in zip(edges[:-1], edges[1:])]
-    return probs
-
-def hist_full(X, bins, a, b):
-    """Return histogram with bins-many bins equally spaced between a and b
-    and too further bins left of a and right of b."""
-    hist, edges = np.histogram(X, bins=bins, range=(a, b))
-    return np.array([np.sum(X<a)] + list(hist) + [np.sum(X>b)])
-
-def test_sample(X, a, b, bins, cdf, parts):
-    """Return True if certain sub-samples of X with size len(X)/parts
-    are distributed according to cdf."""
+def test_sample_simple(X, bins, cdf):
+    """Return pvalue according to chisquare test for bins with equal expected values."""
     
-    n = round(len(X)/parts)   # size of partial samples
-    hist_exp = bins_probs_full(cdf, bins, a, b) * n
-    ppf99 = chi2(bins+1).ppf(0.99)   # chi2 statistic value corresponding to cdf of 0.99
-    hists1 = [hist_full(X[i*n:(i+1)*n], bins, a, b) for i in range(parts)]   # partition X into parts blocks
-    hists2 = [hist_full(X[i::parts], bins, a, b) for i in range(parts)]      # partition X into parts arithmetic progressions
-    OK = True
-    goodnesses = []
-    # print(hists1)
-    # calculate a chi2 statistic for each of the above partitions
-    for hists in hists1, hists2:
-        chi2_statistic = [np.sum((hist - hist_exp)**2/hist_exp) for hist in hists]
-        # plot statistic
-        # plt.hist(chi2_statistic, density=True, bins=round(parts/10), histtype='stepfilled', alpha=0.7)
-        # x = np.linspace(min(chi2_statistic), max(chi2_statistic), 1000)
-        # plt.plot(x, chi2(bins+1).pdf(x), 'k')   # plot relevant chi2 density function
-        good_count = sum([1 for s in chi2_statistic if s <= ppf99])   # count statistics below threshold
-        goodnesses.append(good_count / len(chi2_statistic))
-        OK &= (goodnesses[-1]) >= 0.9               # test is OK if ALL partitions are OK
-    # plt.show()
-    return OK, goodnesses
+    edges = uniform_prob_bin_edges(cdf, bins)
+    hist = hist_full(X, edges)
+    return st.chisquare(hist).pvalue
 
-distributions = [
-    main.normal_10_3,
-    main.uniform_100_10,
-    main.mixed_normal_2,
-    main.mixed_normal_3,
-    main.mixed_normal_11,
-    ]
-
-loc, scale = 100-10*np.sqrt(3), 10*np.sqrt(12)
+def test_sample_discrete(X, values, cdf):
+    """Return pvalue according to chisquare test for bins with equal expected values."""
+    
+    values = sorted(values)
+    edges = [values[0] - 1] + [(a + b)/2 for a, b in zip(values[:-1], values[1:])] + [values[-1] + 1]
+    probs = [cdf(b) - cdf(a) for a, b in zip(edges[:-1], edges[1:])]
+    hist = [np.sum(X == i) for i in values]
+    return st.chisquare(hist, np.array(probs) * len(X)).pvalue
 
 data = {
-        main.normal_10_3:        (  -2,  24, 10, norm(10,  3).cdf),          # a, b, bins, cdf
-        main.uniform_100_10:     (  85, 115, 10, uniform(loc, scale).cdf),   # a, b, bins, cdf
-        main.mixed_normal_2:     (  -8,  12, 10, mixed_normal_2_cdf),        # a, b, bins, cdf
-        main.mixed_normal_3:     (  -6,   6, 10, mixed_normal_3_cdf),        # a, b, bins, cdf
-        main.mixed_normal_11:    (  -1, 102, 10, mixed_normal_11_cdf),       # a, b, bins, cdf
+        'normal_std1': (lambda x, mu: st.norm.cdf(x, loc=mu, scale=1),                                np.linspace(-2, 1, 101)),
+        'normal':      (lambda x, theta: st.norm.cdf(x, loc=theta[0], scale=theta[1]),                np.linspace(-2, 1, 101)),
+        'exp':         (lambda x, lmbda: st.expon.cdf(x, scale=1/lmbda),                              np.linspace(1, 10, 91)),
+        'uniform':     (lambda x, theta: st.uniform.cdf(x, loc=theta[0], scale=theta[1] - theta[0]),  np.linspace(1, 6, 101)),
+        'binomial10':  (lambda x, p: st.binom.cdf(x, 10, p),                                          np.linspace(-0.2, 0.5, 91)),
        }
 
-#rng = np.random.default_rng(171717)
-rng = np.random.default_rng()   # uncomment this for randomness
-#quick_and_dirty = False
-quick_and_dirty = True          # uncomment this for speed-up
+seed = 171717
 
 class Test_Praktikum(Test_Numerik):
     
@@ -554,83 +530,85 @@ class Test_Praktikum(Test_Numerik):
     def true_values(self, key, default='no_value_provided_by_main'):
         return self.true_values_data.get(key, default)
 
-    def test_Bayes_Formel(self):
-        print('Running "test_Bayes_Formel" ...')
-        for P_B_A, P_A, P_B in product((0, 0.2, 0.4, 1), (0, 0.3, 0.5, 1), (0.1, 0.4, 0.7, 1)):
-            with self.subTest(msg=f'Bayes_Formel ist nicht korrekt für Parameter {P_B_A}, {P_A}, {P_B}.'):
-                self.runner(main.Bayes_Formel, (P_B_A, P_A, P_B, ), self.assertAlmostEqualRelative)
+    def test_likelihood(self):
+        x = np.linspace(-5, 5, 41)
+        fi_thetas = [
+                    ('N(mu, 1)', lambda x, mu: st.norm.pdf(x, loc=mu, scale=1), np.linspace(-10, 10, 21)),
+                    ('N(mu, sigma)', lambda x, theta: st.norm.pdf(x, loc=theta[0], scale=theta[1]), product((-10, 0, 10), (0.1, 1, 10))), 
+                    ]
+        for L_or_l, L_or_l_name in zip((main.L, main.l), ('L', 'l')):
+            for name, f,  thetas in fi_thetas:
+                for theta in thetas:
+                    with self.subTest(msg=f'Likelihood {L_or_l_name} ist nicht korrekt für Parameter {x}, {theta}, {name}.'):
+                        self.runner(L_or_l, (theta, x, f), self.assertAlmostEqualRelative)
 
-    def test_totale_Wahrscheinlichkeit(self):
-        print('Running "test_totale_Wahrscheinlichkeit" ...')
-        for n in range(2, 11):
-            for e1, e2 in [(2, 3), (5, 6)]:
-                P_Ai = np.linspace(1, n**e1, n)**e2
-                P_Ai /= np.sum(P_Ai)
-                for s in np.linspace(0, 1, 5):
-                    for e3, e4 in [(7, 8), (12, 13)]:
-                        P_B_Ai = np.linspace(1, n**e3, n)**e4
-                        P_B_Ai *= s/np.sum(P_B_Ai)
-                        with self.subTest(msg=f'totale_Wahrscheinlichkeit für Parameter {P_Ai}, {P_B_Ai}.'):
-                            self.runner(main.totale_Wahrscheinlichkeit, (P_Ai, P_B_Ai, ), self.assertAlmostEqualRelative)
-
-    def test_Test(self):
-        print('Running "test_Test" ...')
-        for Korrektheit, a_priori_Wahrscheinlichkeit in product(np.linspace(0.1, 1, 10), np.linspace(0.1, 1, 10)):
-            with self.subTest(msg=f'Test ist nicht korrekt für Parameter {Korrektheit}, {a_priori_Wahrscheinlichkeit}.'):
-                self.runner(main.Test, (Korrektheit, a_priori_Wahrscheinlichkeit, ), self.assertAlmostEqualRelative)
-
-    def test_Verteilungen(self):
-        print('Running "test_Verteilungen" ...')
-        for distr in distributions:
-            name = distr.__name__
-            print(f'   Testing "{name}" ...')
-            a, b, bins, cdf = data[distr]
-            if quick_and_dirty:
-                n = 10**6
-            else:
-                # n = 10**7
-                n = 10**8
-            parts = 100
+    def test_model_test_data(self):
+        rng = np.random.default_rng(seed)
+        test_data = main.define_model_test_data(rng)
+        for name, data_main in test_data.items():
+            theta, generator, density, MLE_exact, theta0 = data_main
+            cdf, X = data[name]
+            n = 10**4
             def test():
-                X = distr(rng, n)
-                return test_sample(X, a, b, bins, cdf, parts)
-            with self.subTest(msg=f'Verteilung {name} nicht korrekt.', name=name):
-                self.runner(test, (), self.assertEqualComponent, msg='Result of test: {}')
-                
-    def test_GdgZ(self):
-        print('Running "test_GdgZ" ...')
-        for distr in distributions:
-            name = distr.__name__
-            print(f'   Testing "{name}" ...')
-            no_samples_max = 100
-            if quick_and_dirty:
-                no_runs, dist_max = 10**3, 0.06
-            else:
-                no_runs, dist_max = 10**4, 0.03
-            def distance():
-                rel_variances = [main.rel_variance_of_mean(rng, distr, no_samples, no_runs) for no_samples in range(1, no_samples_max + 1)]
-                return np.sqrt(np.sum((rel_variances - 1/np.arange(1, no_samples_max+1))**2))
-            with self.subTest(msg=f'GdgZ nicht korrekt für Verteilung {name}.', name=name):
-                self.runner(distance, (), self.assertLessEqualConstant, constant=dist_max)
-                
-    def test_ZGWS(self):
-        print('Running "test_ZGWS" ...')
-        if quick_and_dirty:
-            no_runs, relative = 10**5, 0.5
-        else:
-            no_runs, relative = 10**6, 0.05
-        n1, n2 = 2, 10
-        N = np.arange(n1, n2+1)
-        a, b, bins = -2, 2, 4
-        for distr in distributions:
-            name = distr.__name__
-            print(f'   Testing "{name}" ...')
-            for n in N:
-                def histogram():
-                    X = main.centralized_sample(rng, distr, n, no_runs)
-                    return hist_full(X, bins, a, b) / no_runs
-                with self.subTest(msg=f'ZGWS ist nicht korrekt für Verteilung {name} und Anzahl {n}.', name=name):
-                    self.runner(histogram, (), self.assertAlmostEqualRelative, relative=relative)
+                X = generator(theta, n)
+                if name == 'binomial10':
+                    return test_sample_discrete(X, range(0, 11), lambda x: cdf(x, theta)) > 0.001
+                else:
+                    return test_sample_simple(X, 10, lambda x: cdf(x, theta))> 0.001
+            with self.subTest(msg=f'Sample Generator in {name} nicht korrekt.', name=name):
+                self.runner(test, (), self.assertEqual)
+            with self.subTest(msg=f'Dichte-Funktion in {name} nicht korrekt.', name=name):
+                self.runner(density, (X, theta, ), self.assertAlmostEqualRelative)
+            with self.subTest(msg=f'Exakter MLE in {name} nicht korrekt.', name=name):
+                self.runner(MLE_exact, (X, ), self.assertAlmostEqualRelative)
+          
+    def test_MLE(self):
+        rng = np.random.default_rng(seed)
+        test_data = main.define_model_test_data(rng)
+        N = 10
+        for name, data in test_data.items():
+            theta, generator, density, MLE_exact, theta0 = data
+            with self.subTest(name=name):
+                for method in None, 'Nelder-Mead', 'SLSQP':   # test these optimization algorithms
+                    print(f'Testing {name} with method {method} ...')
+                    with self.subTest(name=str(method)):
+                        for log in False, True:                   # test Likelihood and log-Likelihood
+                            with self.subTest(name=f"log={log}"):
+                                for n in 10, 100, 1000:               # test these sample sizes
+                                    with self.subTest(name=f"n={n}", msg=f'MLE fehlerhaft für Verteilung {name}, Methode {method}, Likelihood-Funtion {"l" if log else "L"} und n={n}'):
+                                        count_success, count_small_error = 0, 0
+                                        for _ in range(N):
+                                            x = generator(theta, n)       # generate sample of size n
+                                            ret = main.MLE(x, density, theta0, method=method, log=log, return_status=True)
+                                            if ret.success:
+                                                count_success += 1
+                                                if np.all(np.abs(ret.x - MLE_exact(x)) <= 10**-3):
+                                                    count_small_error += 1
+                                        self.runner(lambda x: x, ((count_success, count_small_error), ), self.assertCheckCounts)
+
+    def test_interval_normal_mu(self):
+        for alpha, n, mean, std in product([0.05, 0.01, 0.001], range(100, 901, 200), np.linspace(-10, 10, 11), [0.1, 0.5, 1, 2, 10]):
+            with self.subTest(msg=f'Test ist nicht korrekt für Parameter alpha={alpha}, n={n}, mean={mean}, std={std}.'):
+                self.runner(main.interval_normal_mu, (alpha, std, n, mean, ), self.assertAlmostEqualRelative)
+      
+    def test_interval_normal_mu_sigma(self):
+        for alpha, n, mean, std in product([0.05, 0.01, 0.001], range(100, 901, 200), np.linspace(-10, 10, 11), [0.1, 0.5, 1, 2, 10]):
+            with self.subTest(msg=f'Test ist nicht korrekt für Parameter alpha={alpha}, n={n}, mean={mean}, std={std}.'):
+                self.runner(main.interval_normal_mu_sigma, (alpha, n, mean, std, ), self.assertAlmostEqualRelative)
+    
+    def test_interval_normal_mu_sample(self):
+        rng = np.random.default_rng(seed)
+        for alpha, n, mean, std in product([0.05, 0.01, 0.001], range(100, 901, 200), np.linspace(-10, 10, 11), [0.1, 0.5, 1, 2, 10]):
+            x = rng.normal(mean, std, n)
+            with self.subTest(msg=f'Test ist nicht korrekt für Parameter alpha={alpha}, n={n}, mean={mean}, std={std}.'):
+                self.runner(main.interval_normal_mu_sample, (alpha, std, x, ), self.assertAlmostEqualRelative)
+    
+    def test_interval_normal_mu_sigma_sample(self):
+        rng = np.random.default_rng(seed)
+        for alpha, n, mean, std in product([0.05, 0.01, 0.001], range(100, 901, 200), np.linspace(-10, 10, 11), [0.1, 0.5, 1, 2, 10]):
+            x = rng.normal(mean, std, n)
+            with self.subTest(msg=f'Test ist nicht korrekt für Parameter alpha={alpha}, n={n}, mean={mean}, std={std}.'):
+                self.runner(main.interval_normal_mu_sigma_sample, (alpha, x, ), self.assertAlmostEqualRelative)
                 
     def test_Dateikonsistenz(self):
         print('Running "test_Dateikonsistenz"...')

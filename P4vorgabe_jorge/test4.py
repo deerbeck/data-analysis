@@ -19,13 +19,11 @@ import base64
 import collections
 import contextlib
 from itertools import product
-from scipy.stats import norm
-from scipy.stats import uniform
-from scipy.stats import chi2
+import scipy.stats as st
 
 
 
-P_number = 2
+P_number = 4
 exec('import main{}'.format(P_number))
 exec('main = main{}'.format(P_number))
 # exec('import lib{}'.format(P_number))
@@ -87,9 +85,13 @@ class Test_Numerik(unittest.TestCase):
     def assertLessEqualMultiple(self, result, true_value, multiple=2, **kwargs):
         self.assertLessEqual(result, true_value * multiple, **kwargs)
     
-    def assertEqualComponent(self, result, true_value, index=0, **kwargs):
+    def assertCheckCounts(self, a, b, prec=3, **kwargs):
+        # self.assertTrue(all([min(a[i], b[i]) >= prec*max(a[i], b[i]) for i in range(len(a))]), msg=f'result={a} != {b}=true_value', **kwargs)
+        self.assertTrue(all(abs(a[i] - b[i]) <= prec for i in range(len(a))), msg=f'result={a} != {b}=true_value', **kwargs)
+            
+    def assertEqualComponent(self, result, true_value, index=0, msg_function=lambda x: x, **kwargs):
         msg = kwargs.pop('msg')
-        self.assertEqual(result[index], true_value[index], msg=msg.format(result), **kwargs)
+        self.assertEqual(result[index], true_value[index], msg=msg.format(msg_function(result)), **kwargs)
     
     def assertLessEqualConstant(self, result, true_value, constant=1, **kwargs):
         self.assertLessEqual(result, constant, **kwargs)
@@ -447,8 +449,10 @@ class Results:
 
     
 import_block = """
-      import numpy as np
-      import matplotlib.pyplot as plt
+    import numpy as np
+    import scipy.stats as st
+    import matplotlib.pyplot as plt
+    from statsmodels.stats.diagnostic import lilliefors
 """
 
 def find_import(code, import_block=import_block):
@@ -458,91 +462,22 @@ def find_import(code, import_block=import_block):
         code = re.sub(re_line, '', code)
     return [m.group() for m in re.finditer(r'.*import.*', code)]      # return lines that contain import statement
 
-def mixed_normal_cdf(M, S, P):
-    assert len(M) == len(S)
-    assert 0 <= len(M) - len(P) <= 1
-    if len(P) < len(M):
-        P = np.append(P, [0])   # last element is automatically corrected by np.random.multinomial
-    def cdf(x):
-        return np.sum(np.array([norm(m, s).cdf(x) for m, s in zip(M, S)]) * P)
-    return cdf
-
-data = [(-4, 4), (2, 4), (0.5, 0.5)]
-mixed_normal_2_cdf = mixed_normal_cdf(*data)
-
-data = [(-5, 0, 5), (1, 1, 1), (1/3, 1/3, 1/3)]
-mixed_normal_3_cdf = mixed_normal_cdf(*data)
-
-M = np.linspace(0, 100, 11)
-S = np.linspace(2, 5, 11)
-P = np.array([50, 41, 34, 29, 26, 25, 26, 29, 34, 41, 50]) / 385
-data = M, S, P
-mixed_normal_11_cdf = mixed_normal_cdf(*data)
-
-def bins_probs_full(cdf, bins, a, b):
-    """Return vector of probabilities according to the cumulative distribution function
-    cdf of length bins+2 for the probabilities of "beeing <= a", "beeing in interval
-    [a+hi, a+h(i+1) for h=(b-a)/bins and i in range(bins)" and "beeing >= b"."""
-    probs = np.empty(bins+2)
-    probs[0] = cdf(a)
-    probs[-1] = 1 - cdf(b)
-    edges = np.linspace(a, b, bins + 1)
-    probs[1:-1] = [cdf(r) - cdf(l) for l, r in zip(edges[:-1], edges[1:])]
-    return probs
-
-def hist_full(X, bins, a, b):
-    """Return histogram with bins-many bins equally spaced between a and b
-    and too further bins left of a and right of b."""
-    hist, edges = np.histogram(X, bins=bins, range=(a, b))
-    return np.array([np.sum(X<a)] + list(hist) + [np.sum(X>b)])
-
-def test_sample(X, a, b, bins, cdf, parts):
-    """Return True if certain sub-samples of X with size len(X)/parts
-    are distributed according to cdf."""
-    
-    n = round(len(X)/parts)   # size of partial samples
-    hist_exp = bins_probs_full(cdf, bins, a, b) * n
-    ppf99 = chi2(bins+1).ppf(0.99)   # chi2 statistic value corresponding to cdf of 0.99
-    hists1 = [hist_full(X[i*n:(i+1)*n], bins, a, b) for i in range(parts)]   # partition X into parts blocks
-    hists2 = [hist_full(X[i::parts], bins, a, b) for i in range(parts)]      # partition X into parts arithmetic progressions
-    OK = True
-    goodnesses = []
-    # print(hists1)
-    # calculate a chi2 statistic for each of the above partitions
-    for hists in hists1, hists2:
-        chi2_statistic = [np.sum((hist - hist_exp)**2/hist_exp) for hist in hists]
-        # plot statistic
-        # plt.hist(chi2_statistic, density=True, bins=round(parts/10), histtype='stepfilled', alpha=0.7)
-        # x = np.linspace(min(chi2_statistic), max(chi2_statistic), 1000)
-        # plt.plot(x, chi2(bins+1).pdf(x), 'k')   # plot relevant chi2 density function
-        good_count = sum([1 for s in chi2_statistic if s <= ppf99])   # count statistics below threshold
-        goodnesses.append(good_count / len(chi2_statistic))
-        OK &= (goodnesses[-1]) >= 0.9               # test is OK if ALL partitions are OK
-    # plt.show()
-    return OK, goodnesses
+seed = 171717
+rng = np.random.default_rng(seed)
 
 distributions = [
-    main.normal_10_3,
-    main.uniform_100_10,
-    main.mixed_normal_2,
-    main.mixed_normal_3,
-    main.mixed_normal_11,
-    ]
-
-loc, scale = 100-10*np.sqrt(3), 10*np.sqrt(12)
-
-data = {
-        main.normal_10_3:        (  -2,  24, 10, norm(10,  3).cdf),          # a, b, bins, cdf
-        main.uniform_100_10:     (  85, 115, 10, uniform(loc, scale).cdf),   # a, b, bins, cdf
-        main.mixed_normal_2:     (  -8,  12, 10, mixed_normal_2_cdf),        # a, b, bins, cdf
-        main.mixed_normal_3:     (  -6,   6, 10, mixed_normal_3_cdf),        # a, b, bins, cdf
-        main.mixed_normal_11:    (  -1, 102, 10, mixed_normal_11_cdf),       # a, b, bins, cdf
-       }
-
-#rng = np.random.default_rng(171717)
-rng = np.random.default_rng()   # uncomment this for randomness
-#quick_and_dirty = False
-quick_and_dirty = True          # uncomment this for speed-up
+                    main.Normal(3, 9),
+                    main.Uniform(0, 1), 
+                    main.Beta(2, 2),
+                    main.T(300),
+                    main.T(10),
+                    main.T(7),
+                    main.Laplace(0, 1),
+                    main.Chi2(20),
+                    main.Chi2(4),
+                    main.Gamma(4, 5),
+                    main.Gamma(1, 5),
+                 ]
 
 class Test_Praktikum(Test_Numerik):
     
@@ -554,92 +489,78 @@ class Test_Praktikum(Test_Numerik):
     def true_values(self, key, default='no_value_provided_by_main'):
         return self.true_values_data.get(key, default)
 
-    def test_Bayes_Formel(self):
-        print('Running "test_Bayes_Formel" ...')
-        for P_B_A, P_A, P_B in product((0, 0.2, 0.4, 1), (0, 0.3, 0.5, 1), (0.1, 0.4, 0.7, 1)):
-            with self.subTest(msg=f'Bayes_Formel ist nicht korrekt für Parameter {P_B_A}, {P_A}, {P_B}.'):
-                self.runner(main.Bayes_Formel, (P_B_A, P_A, P_B, ), self.assertAlmostEqualRelative)
+    def test_ecdf(self):
+        rng = np.random.default_rng(seed)
+        k = 3
+        n = 10
+        mu, sigma = 0, 1
+        for _ in range(3):
+            X = rng.normal(mu, sigma , n)
+            xx = list(X[:k]) + list(np.arange(k) + min(X) - 1) + list(np.arange(-k, 0, k) + min(X))
+            for x in xx:
+                with self.subTest(msg=f'ecdf ist nicht korrekt für Parameter {X}, {x}.'):
+                    self.runner(main.ecdf, (X, x), self.assertAlmostEqualRelative)
 
-    def test_totale_Wahrscheinlichkeit(self):
-        print('Running "test_totale_Wahrscheinlichkeit" ...')
-        for n in range(2, 11):
-            for e1, e2 in [(2, 3), (5, 6)]:
-                P_Ai = np.linspace(1, n**e1, n)**e2
-                P_Ai /= np.sum(P_Ai)
-                for s in np.linspace(0, 1, 5):
-                    for e3, e4 in [(7, 8), (12, 13)]:
-                        P_B_Ai = np.linspace(1, n**e3, n)**e4
-                        P_B_Ai *= s/np.sum(P_B_Ai)
-                        with self.subTest(msg=f'totale_Wahrscheinlichkeit für Parameter {P_Ai}, {P_B_Ai}.'):
-                            self.runner(main.totale_Wahrscheinlichkeit, (P_Ai, P_B_Ai, ), self.assertAlmostEqualRelative)
+    def test_normality_tests(self):
+        n = 100
+        rng = np.random.default_rng(seed)
+        def Normal(mu, sigma):
+            def distr(n):
+                return rng.normal(mu, sigma, n)
+            distr.__name__ = f'normal_{mu}_{sigma}'
+            return distr, mu, sigma
+        def Uniform(a, b):
+            def distr(n):
+                return rng.uniform(a, b, n)
+            distr.__name__ = f'uniform_{a}_{b}'
+            return distr, (a + b)/2, np.sqrt((b - a)/12)
+        for i in range(10):
+            for distr, mu, sigma in Uniform(2+i, 7+2*i), Normal(3+i, 9+2*i):
+                distr_name = distr.__name__
+                X = distr(n)
+                for test in main.tests:
+                    test_name = test.__name__
+                    if test_name == 'KS':
+                        with self.subTest(msg=f'Anpassungs-Test {test_name} für Sample {X} aus {distr_name} nicht korrekt.', name=distr_name + '_' + test_name):
+                            self.runner(test, (X, mu, sigma), self.assertEqual)
+                    else:
+                        with self.subTest(msg=f'Anpassungs-Test {test_name} für Sample {X} aus {distr_name} nicht korrekt.', name=distr_name + '_' + test_name):
+                            self.runner(test, (X,), self.assertEqual)
 
-    def test_Test(self):
-        print('Running "test_Test" ...')
-        for Korrektheit, a_priori_Wahrscheinlichkeit in product(np.linspace(0.1, 1, 10), np.linspace(0.1, 1, 10)):
-            with self.subTest(msg=f'Test ist nicht korrekt für Parameter {Korrektheit}, {a_priori_Wahrscheinlichkeit}.'):
-                self.runner(main.Test, (Korrektheit, a_priori_Wahrscheinlichkeit, ), self.assertAlmostEqualRelative)
-
-    def test_Verteilungen(self):
-        print('Running "test_Verteilungen" ...')
-        for distr in distributions:
-            name = distr.__name__
-            print(f'   Testing "{name}" ...')
-            a, b, bins, cdf = data[distr]
-            if quick_and_dirty:
-                n = 10**6
-            else:
-                # n = 10**7
-                n = 10**8
-            parts = 100
-            def test():
-                X = distr(rng, n)
-                return test_sample(X, a, b, bins, cdf, parts)
-            with self.subTest(msg=f'Verteilung {name} nicht korrekt.', name=name):
-                self.runner(test, (), self.assertEqualComponent, msg='Result of test: {}')
-                
-    def test_GdgZ(self):
-        print('Running "test_GdgZ" ...')
-        for distr in distributions:
-            name = distr.__name__
-            print(f'   Testing "{name}" ...')
-            no_samples_max = 100
-            if quick_and_dirty:
-                no_runs, dist_max = 10**3, 0.06
-            else:
-                no_runs, dist_max = 10**4, 0.03
-            def distance():
-                rel_variances = [main.rel_variance_of_mean(rng, distr, no_samples, no_runs) for no_samples in range(1, no_samples_max + 1)]
-                return np.sqrt(np.sum((rel_variances - 1/np.arange(1, no_samples_max+1))**2))
-            with self.subTest(msg=f'GdgZ nicht korrekt für Verteilung {name}.', name=name):
-                self.runner(distance, (), self.assertLessEqualConstant, constant=dist_max)
-                
-    def test_ZGWS(self):
-        print('Running "test_ZGWS" ...')
-        if quick_and_dirty:
-            no_runs, relative = 10**5, 0.5
-        else:
-            no_runs, relative = 10**6, 0.05
-        n1, n2 = 2, 10
-        N = np.arange(n1, n2+1)
-        a, b, bins = -2, 2, 4
-        for distr in distributions:
-            name = distr.__name__
-            print(f'   Testing "{name}" ...')
-            for n in N:
-                def histogram():
-                    X = main.centralized_sample(rng, distr, n, no_runs)
-                    return hist_full(X, bins, a, b) / no_runs
-                with self.subTest(msg=f'ZGWS ist nicht korrekt für Verteilung {name} und Anzahl {n}.', name=name):
-                    self.runner(histogram, (), self.assertAlmostEqualRelative, relative=relative)
-                
+    def test_distributions(self):
+        alpha = 10**-3
+        n = 10**5
+        # rng = np.random.default_rng(seed)
+        for distribution in distributions:
+            distr, mu, sigma = distribution
+            distr_name = distr.__name__
+            distr_name_root = distr_name.split('_')[0]
+            with self.subTest(msg=f'Name {distr_name} ist nicht korrekt.', name='name-' + distr_name):
+                self.runner(lambda x: x, (distr_name,), self.assertEqual)
+            with self.subTest(msg=f'Erwartungswert {mu} von {distr_name} ist nicht korrekt.', name='mu-' + distr_name):
+                self.runner(lambda x: x, (mu,), self.assertEqual)
+            with self.subTest(msg=f'Standardabweichung {sigma} von {distr_name} ist nicht korrekt.', name='sigma-' + distr_name):
+                self.runner(lambda x: x, (sigma,), self.assertEqual)
+            cdf = {'normal':  lambda mu, sigma: st.norm(mu, sigma).cdf,
+                   'uniform': lambda mu, sigma: st.uniform(mu - 6*sigma**2, mu + 6*sigma**2).cdf,
+                   'beta':    lambda mu, sigma: st.beta(mu*(mu*(1-mu)/sigma**2 - 1), (1-mu)*(mu*(1-mu)/sigma**2 - 1)).cdf,
+                   't':       lambda mu, sigma: st.t(round(2*sigma**2/(sigma**2-1))).cdf,
+                   'laplace': lambda mu, sigma: st.laplace(mu, sigma/np.sqrt(2)).cdf,
+                   'chi2':    lambda mu, sigma: st.chi2(mu).cdf,
+                   'gamma':   lambda mu, sigma: st.gamma((mu/sigma)**2, scale=sigma**2/mu).cdf}
+            X, cdf_distr = distr(n), cdf[distr_name_root](mu, sigma)
+            # print(distr_name, st.kstest(X, cdf_distr).pvalue)
+            with self.subTest(msg=f'Sample {X} von {distr_name} ist nicht korrekt.', name='distr-' + distr_name):
+                self.runner(lambda X, cdf: st.kstest(X, cdf).pvalue > alpha, (X, cdf_distr), self.assertEqual)
+                            
     def test_Dateikonsistenz(self):
-        print('Running "test_Dateikonsistenz"...')
+        # print('Running "test_Dateikonsistenz"...')
         for file in files_tested_for_correctness:
             with self.subTest(msg='Datei {} ist verändert worden oder nicht lesbar.'.format(file), name=file):
                 self.runner(Hash_file, (file, ), self.assertEqual)
 
     def test_import_restrictions(self):
-        print('Running "test_import_restrictions"...')
+        # print('Running "test_import_restrictions"...')
         import_block_indented = '\n      '.join([s.strip() for s in re.split(r'[\n\r]+', import_block) if s.strip()])
         for file in files_tested_for_import_restrictions:
             with open(file) as f:
@@ -658,7 +579,7 @@ class Test_Praktikum(Test_Numerik):
 """)
 
     def test_info(self):
-        print('Running "test_info"...')
+        # print('Running "test_info"...')
         output = '''
         
    Die Datei "{}" muss korrekt angegeben werden.

@@ -2,12 +2,9 @@
 # -*- coding: utf-8 -*-
 
 
-
 import numpy as np
 import matplotlib.pyplot as plt
 
-
-from scipy import stats
 
 
 dummy = 0
@@ -247,7 +244,7 @@ def rel_variance_of_mean(rng, distr, no_samples, no_runs):
     
     # Hier Berechnunge der Mittelwerte über die Spalten von X: n array of length no_runs with the mean value for each sample
     
-    Mittelwerte = np.mean(X, axis=1)
+    Mittelwerte = np.mean(X, axis=0)
     
     # Berechnung der Varianzen: single value
     
@@ -306,42 +303,39 @@ def centralized_sample(rng, distr, no_samples, no_runs):
     
     # Matrix deren Spalten Stichproben der Größe no_samples
     X = distr(rng, no_samples*no_runs).reshape(no_samples, no_runs) # Im Skript: Sn = X1 + X2 + X3
-    print('X',X)
-    
-    
-    
-    # Berechnung der zentralisierten Zufallsvariable aus den Spalten von X:  Ergebnis ist dann eine Stichprobe
-    # der Größe no_runs von solchen Zufallsvariablen
-    
+    #print('X',X)
+      
     
     # Zn = (Sn - n*µ) / (sqrt(n)*σ)
     
 
     
     # Sn := X1 + X2 + X3 +...+ Xn
+    # Berechnung der zentralisierten Zufallsvariable aus den Spalten von X:  Ergebnis ist dann eine Stichprobe
+    # der Größe no_runs von solchen Zufallsvariable
+    Sn = np.sum(X, axis=0)   # Beispiel: array([2, 4, 6, ...no_runs])
+    #print("Sn:", Sn)
     
-    Sn = np.sum(X, axis=1)   # Beispiel: array([2, 4, 6, ...no_runs])
-    print("Sn:", Sn)
+    
+    S = distr(rng,10**6)  # Samples
     
     # Mean value: Mittelwert µ: an array([5, 7, 2, ...no_runs])
-    µ = np.mean(X, axis=1)
-    print("µ:", µ)
+    µ = np.around(np.mean(S, axis=0),2)
+    #print("µ:", µ)
     
     
     # Standardabweichung
-    σ = np.std(X, axis=1) # Here an array, with one element per column of X. One-dimensional array with no_runs elements
-    print("σ:", σ)
+    σ = np.around(np.std(S, axis=0),2) # Here an array, with one element per column of X. One-dimensional array with no_runs elements
+    #print("σ:", σ)
     
     
     # zentralisierten Zufallsvariable
     
     # he line np.tile(µ, (no_samples, 1)) creates an array with no_samples rows and 1 column, 
     # where each element of the column is equal to the mean value µ of the corresponding column of X.
-    Zn = (Sn - no_runs*µ) / (np.sqrt(no_runs)*σ) # array
+    Zn = (Sn - no_samples*µ) / (np.sqrt(no_samples)*σ) # array
     
-    print("Zn:", Zn)
-
-    #Zn = stats.zscore(X)
+    #print("Zn:", Zn)
     
     
     return Zn    

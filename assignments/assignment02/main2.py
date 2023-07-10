@@ -230,7 +230,9 @@ def centralized_sample(rng, distr, no_samples, no_runs):
     # Berechnung der zentralisierten Zufallsvariable aus den Spalten von X
     # 3 Vectors
     S_sum = np.sum(X, axis = 0)
+    print(S_sum)
     S_mean = np.mean(S_sum) # = n*y
+    print(S_mean)
     S_std = np.std(S_sum) # sqrt(n)*sigma
 
     Z_n = (S_sum -  S_mean) / (S_std)
@@ -269,6 +271,6 @@ def Aufgabe_ZGWS():
 if __name__ == '__main__':
 
     #Aufgabe_Bayes()
-    #Aufgabe_Verteilungen()
+    Aufgabe_Verteilungen()
     #Aufgabe_GdgZ()
     Aufgabe_ZGWS()
