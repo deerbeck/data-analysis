@@ -249,8 +249,8 @@ distributions = [
 
 # N = 100000   # takes ca. 10h
 # N = 10000    # takes ca. 1h
-# N = 1000       # takes ca. 6min
-N = 100      # takes 40s, not accurate
+N = 1000       # takes ca. 6min
+# N = 100      # takes 40s, not accurate
 # N = 10       # takes 5s, not accurate
       
 def true_rates(n, distribution):
@@ -320,6 +320,16 @@ def test_tests(verbose=True, savefig=False):
         
 if __name__ == "__main__":
     #plot_empiric_normal(rng)
-    #chi_squared(rng)
+    
+    chi_squared(rng)
 
-    test_tests()
+    #test_tests()
+
+    hi = np.array([7,19,24,65,96,116,132,125,109,78,51,35,23,21,7,13,8,21])
+    npi =np.array([44.76,29.00,41.43,55.54,69.87,82.49,91.40,95.05,92.76,84.96,73.03,58.91,44.60,31.69,21.13,13.22,7.77,8.40])
+    qn = np.sum((hi-npi)**2/npi)
+    crit = st.chi2(5).ppf(0.99)
+    p = st.chi2(5).sf(37.17)
+    #crit = st.t.ppf(1 - 0.00001, df=5)
+    print(crit)
+    pass

@@ -82,14 +82,17 @@ class Test_Numerik(unittest.TestCase):
                 self.fail('"result" is iterable", but "true value" is not.')
             return False
         
-    def assertAlmostEqualPlaces(self, result, true_value, places=7):
+    def assertAlmostEqualPlaces(self, result, true_value, places=7, **kwargs):
         # check if both arguments are iterable or if both are not iterable (otherwise raise assertion error)
-        if self.assertBothIterableOrBothNotIterable(result, true_value):
-            for r, t in zip(result, true_value):
-                self.assertAlmostEqualPlaces(r, t, places=places)
+        if type(true_value) is str:
+            self.assertEqual(result, true_value)
         else:
-            self.assertAlmostEqual(result, true_value, places=places)
-        
+            if self.assertBothIterableOrBothNotIterable(result, true_value):
+                for result, true_value in zip(result, true_value):
+                    self.assertAlmostEqualPlaces(result, true_value, places=places, **kwargs)
+            else:
+                self.assertAlmostEqual(result, true_value, places=places, **kwargs)        
+                
     def assertAlmostEqualRelative(self, result, true_value, relative=10**-7, **kwargs):
         # check if both arguments are iterable or if both are not iterable (otherwise raise assertion error)
         if type(true_value) is str:
@@ -488,7 +491,7 @@ class Test_Praktikum(Test_Numerik):
     def test_pca(self):
         for a, name in self.data_name_pairs_X:
             with self.subTest(msg=f'PCA ist nicht korrekt für X={name}.', X=a, name=name):
-                self.runner(main.pca, (a, ), self.assertAlmostEqualRelative, post=standardize_sign)
+                self.runner(main.pca, (a, ), self.assertAlmostEqualPlaces, post=standardize_sign)
             
     def test_Dateikonsistenz(self):
         for file in files_tested_for_correctness:

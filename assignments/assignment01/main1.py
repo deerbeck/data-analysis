@@ -119,26 +119,47 @@ def pca(X):
     Q = standardize_sign(Q)
     return (Q, e_values, (B @ Q))
 
-# x = np.array([(((2**3)**5)**7),(((2**3)**7)**5),(((2**3)**6)**6)])
-# x = np.array([(((2**3)**5)**7),(((3**3)**5)**7),(((-2**3)**5)**7),(((-3**3)**5)**7)])
-# print(median(x))
 
-# S = np.array([[363,60],[60,482]])
-# eig_val, eig_vect = np.linalg.eig(S)
-# print(eig_val)
-# print(eig_vect)
-# x = [4.1, 4.5, 4.9, 5.1, 5.4, 5.7, 5.8, 5.8, 6, 67]
-# x = [90, 100, 110]
-# print(quartil(x, 0.25))
-# print(median(x))
-# print(var(x))
+if __name__ == "__main__":
 
-X = np.array([np.array([1,2]),np.array([2,1]),np.array([3,3]),np.array([4,5]),np.array([5,4])])
-plt.scatter(*np.hsplit(X,2))
-plt.axis('equal')
-plt.show()
-test = pca(X)
+    # x = np.array([(((2**3)**5)**7),(((2**3)**7)**5),(((2**3)**6)**6)])
+    # x = np.array([(((2**3)**5)**7),(((3**3)**5)**7),(((-2**3)**5)**7),(((-3**3)**5)**7)])
+    # print(median(x))
 
-plt.scatter(*np.hsplit(pca(X)[-1],2))
-plt.axis('equal')
-plt.show()
+    # S = np.array([[363,60],[60,482]])
+
+    # eig_val, eig_vec = np.linalg.eig(S)
+    # idx = eig_val.argsort()[::-1]
+    # eig_val = eig_val[idx]
+    # eig_vec = eig_vec[:, idx]
+    
+    # D = eig_vec.T @ S @ eig_vec
+    
+    # print(eig_val)
+
+    # S = np.array([[363,60],[60,482]])
+    # eig_val, eig_vect = np.linalg.eig(S)
+    # print(eig_val)
+
+    # idx = eig_val.argsort()[::-1]
+    # e_values = eig_val[idx]
+    # Q = eig_vect[:, idx]
+
+
+    # print(Q)
+    # x = [4.1, 4.5, 4.9, 5.1, 5.4, 5.7, 5.8, 5.8, 6, 67]
+    # x = [90, 100, 110]
+    # print(quartil(x, 0.25))
+    # print(median(x))
+    # print(var(x))
+
+    X = np.array([np.array([1,2]),np.array([2,1]),np.array([3,3]),np.array([4,5]),np.array([5,4])])
+    plt.scatter(*np.hsplit(X,2))
+    plt.axis('equal')
+    plt.show()
+    test = pca(X)
+    pass
+    plt.scatter(*np.hsplit(pca(X)[-1],2))
+    plt.axis('equal')
+    plt.show()
+
